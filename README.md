@@ -32,5 +32,5 @@ A powerful AI chatbot built using Google Gemini API that performs semantic tool 
 ### 1️⃣ Clone the repo
 
 ```bash
-git clone https://github.com/your_username/genai-chatbot.git
+git clone https://github.com/ankity1/genai-document-chatbot.git
 cd genai-chatbot
