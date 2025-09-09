@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Document Chatbot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      background: #4a90e2;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    #chatSection {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-radius: 8px;
+      margin: 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    #chatBox {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      background: #f9fafb;
+    }
+    .message {
+      margin: 0.5rem 0;
+      padding: 0.7rem 1rem;
+      border-radius: 12px;
+      max-width: 70%;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+    .user {
+      background: #d1e7dd;
+      align-self: flex-end;
+      text-align: right;
+    }
+    .bot {
+      background: #e2e3e5;
+      align-self: flex-start;
+    }
+    #chatForm {
+      display: flex;
+      align-items: center;
+      border-top: 1px solid #ddd;
+      padding: 0.5rem;
+      background: #fff;
+    }
+    #chatForm input[type="text"] {
+      flex: 1;
+      padding: 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      outline: none;
+      font-size: 1rem;
+      margin: 0 0.5rem;
+    }
+    #chatForm button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s ease;
+    }
+    #chatForm button:hover {
+      background: #357ab7;
+    }
+    #fileLabel {
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: #4a90e2;
+      padding: 0.4rem;
+    }
+    #fileInput {
+      display: none;
+    }
+    #status {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #555;
+      margin: 0.3rem 0;
+    }
+  </style>
+</head>
+<body>
+  <header>📄 AI Document Chatbot</header>
+  <main>
+    <!-- Chat Section -->
+    <section id="chatSection">
+      <div id="chatBox"></div>
+      <div id="status">No document uploaded</div>
+      <form id="chatForm">
+        <!-- Upload button inside input bar -->
+        <label id="fileLabel" for="fileInput">📎</label>
+        <input type="file" id="fileInput" name="file" accept=".pdf,.docx">
+        <input type="text" id="chatInput" placeholder="Type a message..." required>
+        <button type="submit">➤</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    let sessionId = null;
+
+    // Handle file upload inside chat bar
+    document.getElementById("fileInput").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      document.getElementById("status").innerText = "📂 Uploading document...";
+      try {
+        const res = await fetch("/start_chat/", { method: "POST", body: formData });
+        const data = await res.json();
+        if (res.ok) {
+          sessionId = data.session_id;
+          document.getElementById("status").innerText = "✅ Document loaded. You can start chatting!";
+        } else {
+          document.getElementById("status").innerText = "❌ Error: " + data.detail;
+        }
+      } catch (err) {
+        document.getElementById("status").innerText = "❌ Error connecting to server.";
+      }
+    });
+
+    // Handle sending messages
+    document.getElementById("chatForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const input = document.getElementById("chatInput");
+  const userText = input.value.trim();
+  if (!userText) return;
+
+  addMessage(userText, "user");
+  input.value = "";
+
+  addMessage("...", "bot");
+
+  try {
+    const formData = new FormData();
+    formData.append("session_id", sessionId || "");  // Always send sessionId (empty string if null)
+    formData.append("message", userText);
+    formData.append("tool", "general_qa");  // Could dynamically change in UI later
+
+    const res = await fetch("/chat/", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+    document.querySelector("#chatBox .bot:last-child").innerText = data.reply;
+  } catch (err) {
+    document.querySelector("#chatBox .bot:last-child").innerText = "❌ Error getting reply.";
+  }
+});
+
+
+    // Utility: add message
+    function addMessage(text, sender) {
+      const msg = document.createElement("div");
+      msg.className = "message " + sender;
+      msg.innerText = text;
+      document.getElementById("chatBox").appendChild(msg);
+      document.getElementById("chatBox").scrollTop = document.getElementById("chatBox").scrollHeight;
+    }
+  </script>
+</body>
+</html>
